@@ -16,7 +16,7 @@ travis-ci = { repository = "https://github.com/hjr3/hyper-timeout", branch = "ma
 bytes = "0.5"
 hyper = { version = "0.13", default-features = false, features = ["tcp"] }
 tokio = "0.2"
-tokio-io-timeout = "0.4"
+tokio-io-timeout = { git = "https://github.com/ankitects/tokio-io-timeout.git", branch = "shared-timeout" }
 
 [dev-dependencies]
 hyper-tls = "0.4"

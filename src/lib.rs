@@ -24,10 +24,8 @@ pub struct TimeoutConnector<T> {
     connector: T,
     /// Amount of time to wait connecting
     connect_timeout: Option<Duration>,
-    /// Amount of time to wait reading response
-    read_timeout: Option<Duration>,
-    /// Amount of time to wait writing request
-    write_timeout: Option<Duration>,
+    /// Amount of time to wait for either a read or write to progress
+    io_timeout: Option<Duration>,
 }
 
 impl<T> TimeoutConnector<T>
@@ -42,8 +40,7 @@ where
         TimeoutConnector {
             connector,
             connect_timeout: None,
-            read_timeout: None,
-            write_timeout: None,
+            io_timeout: None,
         }
     }
 }
@@ -66,8 +63,7 @@ where
 
     fn call(&mut self, dst: Uri) -> Self::Future {
         let connect_timeout = self.connect_timeout;
-        let read_timeout = self.read_timeout;
-        let write_timeout = self.write_timeout;
+        let io_timeout = self.io_timeout;
         let connecting = self.connector.call(dst);
 
         let fut = async move {
@@ -87,8 +83,7 @@ where
             };
 
             let mut tm = TimeoutConnectorStream::new(stream);
-            tm.set_read_timeout(read_timeout);
-            tm.set_write_timeout(write_timeout);
+            tm.set_io_timeout(io_timeout);
             Ok(Box::pin(tm))
         };
 
@@ -109,16 +104,8 @@ impl<T> TimeoutConnector<T> {
     ///
     /// Default is no timeout.
     #[inline]
-    pub fn set_read_timeout(&mut self, val: Option<Duration>) {
-        self.read_timeout = val;
-    }
-
-    /// Set the timeout for the request.
-    ///
-    /// Default is no timeout.
-    #[inline]
-    pub fn set_write_timeout(&mut self, val: Option<Duration>) {
-        self.write_timeout = val;
+    pub fn set_io_timeout(&mut self, val: Option<Duration>) {
+        self.io_timeout = val;
     }
 }
 
@@ -177,7 +164,7 @@ mod tests {
         let http = HttpConnector::new();
         let mut connector = TimeoutConnector::new(http);
         // A 1 ms read timeout should be so short that we trigger a timeout error
-        connector.set_read_timeout(Some(Duration::from_millis(1)));
+        connector.set_io_timeout(Some(Duration::from_millis(1)));
 
         let client = Client::builder().build::<_, hyper::Body>(connector);
 

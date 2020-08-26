@@ -8,8 +8,8 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::time::timeout;
 use tokio_io_timeout::TimeoutStream;
 
-use hyper::{service::Service, Uri};
 use hyper::client::connect::{Connect, Connected, Connection};
+use hyper::{service::Service, Uri};
 
 mod stream;
 
@@ -24,10 +24,8 @@ pub struct TimeoutConnector<T> {
     connector: T,
     /// Amount of time to wait connecting
     connect_timeout: Option<Duration>,
-    /// Amount of time to wait reading response
-    read_timeout: Option<Duration>,
-    /// Amount of time to wait writing request
-    write_timeout: Option<Duration>,
+    /// Amount of time to wait for either a read or write to progress
+    io_timeout: Option<Duration>,
 }
 
 impl<T: Connect> TimeoutConnector<T> {
@@ -36,8 +34,7 @@ impl<T: Connect> TimeoutConnector<T> {
         TimeoutConnector {
             connector: connector,
             connect_timeout: None,
-            read_timeout: None,
-            write_timeout: None,
+            io_timeout: None,
         }
     }
 }
@@ -62,8 +59,7 @@ where
     }
 
     fn call(&mut self, dst: Uri) -> Self::Future {
-        let read_timeout = self.read_timeout.clone();
-        let write_timeout = self.write_timeout.clone();
+        let io_timeout = self.io_timeout.clone();
         let connecting = self.connector.call(dst);
 
         if self.connect_timeout.is_none() {
@@ -71,8 +67,7 @@ where
                 let io = connecting.await.map_err(Into::into)?;
 
                 let mut tm = TimeoutConnectorStream::new(TimeoutStream::new(io));
-                tm.set_read_timeout(read_timeout);
-                tm.set_write_timeout(write_timeout);
+                tm.set_io_timeout(io_timeout);
                 Ok(tm)
             };
 
@@ -87,8 +82,7 @@ where
             let io = connecting.map_err(Into::into)?;
 
             let mut tm = TimeoutConnectorStream::new(TimeoutStream::new(io));
-            tm.set_read_timeout(read_timeout);
-            tm.set_write_timeout(write_timeout);
+            tm.set_io_timeout(io_timeout);
             Ok(tm)
         };
 
@@ -109,16 +103,8 @@ impl<T> TimeoutConnector<T> {
     ///
     /// Default is no timeout.
     #[inline]
-    pub fn set_read_timeout(&mut self, val: Option<Duration>) {
-        self.read_timeout = val;
-    }
-
-    /// Set the timeout for the request.
-    ///
-    /// Default is no timeout.
-    #[inline]
-    pub fn set_write_timeout(&mut self, val: Option<Duration>) {
-        self.write_timeout = val;
+    pub fn set_io_timeout(&mut self, val: Option<Duration>) {
+        self.io_timeout = val;
     }
 }
 
@@ -171,7 +157,7 @@ mod tests {
         let http = HttpConnector::new();
         let mut connector = TimeoutConnector::new(http);
         // A 1 ms read timeout should be so short that we trigger a timeout error
-        connector.set_read_timeout(Some(Duration::from_millis(1)));
+        connector.set_io_timeout(Some(Duration::from_millis(1)));
 
         let client = Client::builder().build::<_, hyper::Body>(connector);
 

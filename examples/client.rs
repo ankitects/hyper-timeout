@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let https = HttpsConnector::new();
     let mut connector = TimeoutConnector::new(https);
     connector.set_connect_timeout(Some(Duration::from_secs(5)));
-    connector.set_read_timeout(Some(Duration::from_secs(5)));
+    connector.set_io_timeout(Some(Duration::from_secs(5)));
     connector.set_write_timeout(Some(Duration::from_secs(5)));
     let client = Client::builder().build::<_, hyper::Body>(connector);
 

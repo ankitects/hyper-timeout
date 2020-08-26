@@ -25,27 +25,15 @@ where
     }
 
     /// Returns the current read timeout.
-    pub fn read_timeout(&self) -> Option<Duration> {
-        self.0.read_timeout()
+    pub fn io_timeout(&self) -> Option<Duration> {
+        self.0.timeout()
     }
 
     /// Sets the read timeout.
     ///
     /// This will reset any pending read timeout.
-    pub fn set_read_timeout(&mut self, timeout: Option<Duration>) {
-        self.0.set_read_timeout(timeout)
-    }
-
-    /// Returns the current write timeout.
-    pub fn write_timeout(&self) -> Option<Duration> {
-        self.0.write_timeout()
-    }
-
-    /// Sets the write timeout.
-    ///
-    /// This will reset any pending write timeout.
-    pub fn set_write_timeout(&mut self, timeout: Option<Duration>) {
-        self.0.set_write_timeout(timeout)
+    pub fn set_io_timeout(&mut self, timeout: Option<Duration>) {
+        self.0.set_timeout(timeout)
     }
 
     /// Returns a shared reference to the inner stream.
